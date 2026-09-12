@@ -13,9 +13,10 @@ function canonicalize(value: unknown): string {
   const t = typeof value;
   if (t === "object") {
     const obj = value as Record<string, unknown>;
-    const parts = Object.keys(obj)
-      .sort()
-      .map((k) => `${JSON.stringify(k)}:${canonicalize(obj[k])}`);
+    const parts = Object.entries(obj)
+      .filter(([, v]) => v !== undefined)
+      .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+      .map(([k, v]) => `${JSON.stringify(k)}:${canonicalize(v)}`);
     return `{${parts.join(",")}}`;
   }
   if (t === "string") return `s:${JSON.stringify(value)}`;

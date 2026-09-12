@@ -42,5 +42,8 @@ describe("contentHash", () => {
     m2.a = "v";
     m2.z = { x: [1, 2, { a: 1, b: 2 }], y: 1 };
     expect(contentHash(base({ metadata: m1 }))).toBe(contentHash(base({ metadata: m2 })));
+
+    // agent: undefined 与省略 agent（JSON 往返后键消失）→ 哈希相同
+    expect(contentHash(base({ agent: undefined }))).toBe(contentHash(base()));
   });
 });
