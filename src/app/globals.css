@@ -1,0 +1,57 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #fbfbfd;
+  --color-surface: #ffffff;
+  --color-muted-bg: #f5f5f7;
+  --color-border: #e8e8ed;
+  --color-fg: #1d1d1f;
+  --color-fg-secondary: #515154;
+  --color-fg-tertiary: #86868b;
+  --color-accent: #6d5ae0;
+  --color-accent-hover: #5b47d6;
+  --color-accent-soft: #f0edfc;
+  --color-danger: #d92d20;
+  --color-danger-soft: #fef3f2;
+  --color-success: #12b76a;
+  --color-success-soft: #ecfdf3;
+  --radius-card: 12px;
+  --font-sans: ui-sans-serif, -apple-system, "Segoe UI", "PingFang SC",
+    "Microsoft YaHei", sans-serif;
+}
+
+html,
+body {
+  background: var(--color-bg);
+  color: var(--color-fg);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+}
+
+@layer components {
+  .card {
+    @apply bg-surface border border-border rounded-[var(--radius-card)] shadow-[0_2px_12px_-4px_rgba(23,23,30,0.04)];
+  }
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-lg bg-fg px-3.5 py-2 text-[13px] font-medium text-surface transition hover:opacity-90 active:scale-[0.97] disabled:opacity-40;
+  }
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-lg border border-border bg-surface px-3.5 py-2 text-[13px] font-medium text-fg transition hover:bg-muted-bg active:scale-[0.97] disabled:opacity-40;
+  }
+  .input {
+    @apply w-full rounded-lg border border-border bg-surface px-3 py-2 text-[13px] text-fg outline-none transition placeholder:text-fg-tertiary focus:border-accent;
+  }
+  .chip {
+    @apply inline-flex items-center rounded-md bg-muted-bg px-2 py-0.5 text-[12px] text-fg-secondary;
+  }
+  .text-muted {
+    @apply text-fg-secondary;
+  }
+  .nav-item {
+    @apply flex items-center gap-2 rounded-lg px-3 py-2 text-[13px] text-fg-secondary transition hover:bg-muted-bg hover:text-fg;
+  }
+  .nav-item-active {
+    @apply bg-accent-soft font-medium text-accent hover:bg-accent-soft hover:text-accent;
+  }
+}
