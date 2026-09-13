@@ -1,0 +1,28 @@
+[
+  {
+    "id": "sample-trace-1",
+    "agent": "demo-agent",
+    "model": "demo-model",
+    "input": "读取 README 并总结项目用途",
+    "status": "success",
+    "tags": ["demo", "read"],
+    "steps": [
+      { "id": "s1", "type": "thought", "content": "先找到 README 文件再读取", "status": "success" },
+      { "id": "s2", "type": "tool_call", "name": "glob", "input": "{\"pattern\":\"README*\"}", "status": "success" },
+      { "id": "s3", "type": "tool_result", "parent_id": "s2", "output": "README.md", "status": "success" },
+      { "id": "s4", "type": "tool_call", "name": "read_file", "input": "{\"path\":\"README.md\"}", "status": "success" },
+      { "id": "s5", "type": "tool_result", "parent_id": "s4", "output": "# demo\n用于演示的项目。", "status": "success" }
+    ]
+  },
+  {
+    "id": "sample-trace-2",
+    "agent": "demo-agent",
+    "input": "删除不存在的临时文件",
+    "status": "error",
+    "tags": ["demo", "write"],
+    "steps": [
+      { "id": "t1", "type": "tool_call", "name": "shell", "input": "{\"command\":\"rm tmp/missing.tmp\"}", "status": "error" },
+      { "id": "t2", "type": "error", "parent_id": "t1", "content": "rm: tmp/missing.tmp: No such file or directory", "status": "error" }
+    ]
+  }
+]

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { UploadCloud, Loader2 } from "lucide-react";
+import { UploadCloud, Loader2, FileJson } from "lucide-react";
 
 interface Report {
   filename: string; total: number; succeeded: number;
@@ -40,6 +40,20 @@ export function ImportZone({ onImported }: { onImported: () => void }) {
     }
   }
 
+  async function loadSample() {
+    setBusy(true); setError(""); setReports(null);
+    try {
+      const res = await fetch("/sample-traces.json");
+      if (!res.ok) throw new Error(`示例文件加载失败 (${res.status})`);
+      const blob = await res.blob();
+      const file = new File([blob], "sample-traces.json", { type: "application/json" });
+      await upload([file]);
+    } catch (e) {
+      setError((e as Error).message);
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="space-y-3">
       <div
@@ -58,6 +72,12 @@ export function ImportZone({ onImported }: { onImported: () => void }) {
           ref={inputRef} type="file" accept=".json,.jsonl" multiple hidden
           onChange={(e) => { if (e.target.files) void upload(e.target.files); e.target.value = ""; }}
         />
+      </div>
+      <div className="flex justify-end">
+        <button type="button" className="btn-secondary" disabled={busy} onClick={() => void loadSample()}>
+          {busy ? <Loader2 size={14} className="animate-spin" /> : <FileJson size={14} />}
+          载入示例轨迹
+        </button>
       </div>
       {error && <div className="rounded-lg bg-danger-soft px-3 py-2 text-[13px] text-danger">{error}</div>}
       {reports && (

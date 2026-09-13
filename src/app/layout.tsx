@@ -1,14 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ListChecks, BarChart3, SlidersHorizontal, Settings } from "lucide-react";
+import { ListChecks, Settings } from "lucide-react";
 import "./globals.css";
 
 export const metadata: Metadata = { title: "Trace Eval", description: "Agent 轨迹评测工作台" };
 
 const NAV = [
   { href: "/", label: "轨迹", icon: ListChecks },
-  { href: "/dashboard", label: "看板", icon: BarChart3 },
-  { href: "/rubrics", label: "评分标准", icon: SlidersHorizontal },
   { href: "/settings", label: "设置", icon: Settings },
 ];
 
