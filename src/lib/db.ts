@@ -3,7 +3,8 @@ import { mkdirSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
 const dbPath =
-  process.env.TRACEEVAL_DB_PATH ?? join(process.cwd(), "data", "app.db");
+  process.env.TRACEEVAL_DB_PATH ??
+  (process.env.VERCEL ? "/tmp/trace-eval.db" : join(process.cwd(), "data", "app.db"));
 mkdirSync(dirname(dbPath), { recursive: true });
 
 export const db = new Database(dbPath);
