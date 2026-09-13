@@ -7,6 +7,7 @@ import {
   getDefaultRubric, listRubrics, createRubric, setDefaultRubric,
   createEvaluationBatch, getBatchStatus, markEvaluationRunning,
   saveEvaluationSuccess, saveEvaluationError, resetRunningEvaluations, getEvaluation,
+  getEvaluationDetail, listEvaluationDetailsByTrace,
 } from "@/lib/repo-rubric";
 import { insertImportAndTraces, listTraces } from "@/lib/repo";
 import { normalizeTrace } from "@/lib/normalize";
@@ -68,5 +69,36 @@ describe("evaluation repository", () => {
     expect(getEvaluation(ids2[0])?.status).toBe("error");
     saveEvaluationError(ids2[0], "再次失败");
     expect(getEvaluation(ids2[0])?.error).toContain("再次失败");
+  });
+
+  it("attaches dimension scores in evaluation detail queries", () => {
+    seedTrace();
+    const rubric = getDefaultRubric();
+    const traceId = listTraces({ page: 1, pageSize: 10 }).items[0].id;
+    const [evalId] = createEvaluationBatch("batch-detail", [traceId], rubric.id, "judge-model");
+    markEvaluationRunning(evalId);
+    saveEvaluationSuccess(evalId, {
+      output: {
+        scores: [
+          { dimension_key: rubric.dimensions[0].key, score: 4, rationale: "较好" },
+          { dimension_key: rubric.dimensions[1].key, score: 2, rationale: "不足" },
+        ],
+        overall_score: 3, passed: false, summary: "一般",
+        issues: [{ step_idx: 1, severity: "medium", dimension_key: rubric.dimensions[1].key, message: "y" }],
+      },
+      raw: "{}", latencyMs: 50, passThreshold: rubric.passThreshold,
+    });
+
+    const detail = getEvaluationDetail(evalId);
+    expect(detail).not.toBeNull();
+    expect(detail!.scores).toHaveLength(2);
+    expect(detail!.scores[0]).toEqual({
+      dimensionKey: rubric.dimensions[0].key, score: 4, rationale: "较好",
+    });
+
+    const list = listEvaluationDetailsByTrace(traceId);
+    expect(list.length).toBeGreaterThan(0);
+    expect(list[0].scores).toHaveLength(2);
+    expect(getEvaluationDetail("nonexistent-id")).toBeNull();
   });
 });

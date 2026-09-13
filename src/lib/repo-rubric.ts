@@ -184,3 +184,30 @@ export function resetRunningEvaluations(): number {
   ).run();
   return info.changes;
 }
+
+export interface EvalScoreRow { dimensionKey: string; score: number; rationale: string; }
+export interface EvaluationDetail extends EvaluationRow { scores: EvalScoreRow[] }
+
+function attachScores(row: Record<string, unknown>): EvaluationDetail {
+  const base = mapEval(row);
+  const scores = (db.prepare(
+    "SELECT dimension_key, score, rationale FROM eval_scores WHERE evaluation_id = ? ORDER BY rowid",
+  ).all(row.id) as Record<string, unknown>[]).map((s) => ({
+    dimensionKey: s.dimension_key as string,
+    score: Number(s.score),
+    rationale: s.rationale as string,
+  }));
+  return { ...base, scores };
+}
+
+export function getEvaluationDetail(id: string): EvaluationDetail | null {
+  const r = db.prepare("SELECT * FROM evaluations WHERE id = ?").get(id) as Record<string, unknown> | undefined;
+  return r ? attachScores(r) : null;
+}
+
+export function listEvaluationDetailsByTrace(traceId: string): EvaluationDetail[] {
+  const rows = db.prepare(
+    "SELECT * FROM evaluations WHERE trace_id = ? ORDER BY created_at DESC, rowid DESC",
+  ).all(traceId) as Record<string, unknown>[];
+  return rows.map(attachScores);
+}
