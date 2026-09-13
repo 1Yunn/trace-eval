@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Loader2, RotateCcw } from "lucide-react";
+import { Loader2, RotateCcw, ChevronDown } from "lucide-react";
 import { apiJson } from "@/lib/http";
 import type { Rubric } from "@/lib/types";
 import { StatusBadge } from "./badges";
 
 interface ScoreRow { dimensionKey: string; score: number; rationale: string }
-interface Issue { step_idx: number | null; severity: "high" | "medium" | "low"; dimension_key: string; message: string }
+interface Issue { step_idx: number | null; severity: "high" | "medium" | "low"; dimension_key: string; message: string; suggestion?: string }
 export interface EvaluationDetail {
   id: string; rubricId: string; model: string; status: string;
   overallScore?: number; passed?: boolean; summary?: string;
@@ -17,8 +17,6 @@ interface BatchStatus {
   total: number; pending: number; running: number; success: number; error: number;
   items: { id: string; traceId: string; status: string }[];
 }
-
-const SEV_LABEL: Record<string, string> = { high: "高", medium: "中", low: "低" };
 
 export function EvalPanel({
   traceId, rubrics, initial, onChanged,
@@ -78,9 +76,12 @@ export function EvalPanel({
   }
 
   const latest = evals[0];
+  const latestRubric = rubrics.find((r) => r.id === latest?.rubricId);
+  const dimName = (key: string) => latestRubric?.dimensions.find((d) => d.key === key)?.name ?? key;
+  const dimScale = (key: string) => latestRubric?.dimensions.find((d) => d.key === key)?.scale ?? 5;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 self-start lg:sticky lg:top-6">
       <div className="card space-y-3 p-4">
         <div className="text-[13px] font-semibold">发起评分</div>
         <select className="input" value={rubricId} onChange={(e) => setRubricId(e.target.value)}>
@@ -110,41 +111,39 @@ export function EvalPanel({
                 <span className="text-[12px] text-muted">{latest.passed ? "通过" : "未通过"} · {latest.model}</span>
               </div>
               {latest.summary && <p className="text-[13px] leading-relaxed text-fg-secondary">{latest.summary}</p>}
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 {latest.scores.map((s) => (
-                  <div key={s.dimensionKey} className="rounded-lg bg-muted-bg p-2.5">
-                    <div className="flex justify-between text-[12px]">
-                      <span className="font-medium">{s.dimensionKey}</span>
-                      <span className="text-accent">{s.score}</span>
+                  <div key={s.dimensionKey} className="flex items-center gap-2 text-[12px]">
+                    <span className="w-20 shrink-0 truncate text-fg-secondary">{dimName(s.dimensionKey)}</span>
+                    <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted-bg">
+                      <div
+                        className={`h-full rounded-full ${latest.passed ? "bg-success" : "bg-accent"}`}
+                        style={{ width: `${Math.max(0, Math.min(1, s.score / dimScale(s.dimensionKey))) * 100}%` }}
+                      />
                     </div>
-                    <div className="mt-0.5 text-[12px] text-muted">{s.rationale}</div>
+                    <span className="w-7 shrink-0 text-right tabular-nums text-fg-tertiary">{s.score}</span>
                   </div>
                 ))}
               </div>
               {latest.issues.length > 0 && (
-                <div className="space-y-1.5">
-                  <div className="text-[12px] font-medium text-muted">问题清单</div>
-                  {latest.issues.map((iss, i) => (
-                    <button
-                      key={i}
-                      className="block w-full rounded-lg border border-border p-2 text-left text-[12px] hover:bg-muted-bg"
-                      onClick={() => {
-                        if (iss.step_idx !== null) {
-                          document.getElementById(`step-${iss.step_idx}`)
-                            ?.scrollIntoView({ behavior: "smooth", block: "center" });
-                        }
-                      }}
-                    >
-                      <span className={`mr-1.5 rounded px-1.5 py-0.5 text-[11px] ${
-                        iss.severity === "high" ? "bg-danger-soft text-danger" : "bg-muted-bg text-fg-secondary"
-                      }`}>{SEV_LABEL[iss.severity]}</span>
-                      <span className="text-fg-tertiary">{iss.dimension_key} · </span>
-                      {iss.message}
-                      {iss.step_idx !== null && <span className="ml-1 text-accent">→ 步骤 {iss.step_idx}</span>}
-                    </button>
-                  ))}
+                <div className="rounded-md bg-muted-bg px-2.5 py-1.5 text-[12px] text-fg-secondary">
+                  共发现 {latest.issues.length} 个问题，已标在时间线对应步骤中
                 </div>
               )}
+              <details className="group">
+                <summary className="flex cursor-pointer list-none items-center gap-1 text-[12px] text-accent [&::-webkit-details-marker]:hidden">
+                  维度评分明细
+                  <ChevronDown size={13} className="transition-transform group-open:rotate-180" />
+                </summary>
+                <div className="mt-2 space-y-1.5">
+                  {latest.scores.map((s) => (
+                    <div key={s.dimensionKey} className="text-[12px]">
+                      <span className="font-medium">{dimName(s.dimensionKey)}：</span>
+                      <span className="text-muted">{s.rationale}</span>
+                    </div>
+                  ))}
+                </div>
+              </details>
             </>
           )}
           {latest.status === "error" && (

@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
-import { createRubric, listRubrics } from "@/lib/repo-rubric";
+import { createRubric, getDefaultRubric, listRubrics } from "@/lib/repo-rubric";
 import { validateWeights } from "@/lib/scoring/weight";
 import type { RubricDimension } from "@/lib/types";
 
 export const runtime = "nodejs";
 
 export async function GET() {
+  // 幂等：首次访问时播种内置默认 rubric（列表页弹窗与详情页面板都依赖该列表）
+  getDefaultRubric();
   return NextResponse.json({ items: listRubrics() });
 }
 

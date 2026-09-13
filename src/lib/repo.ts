@@ -39,6 +39,12 @@ export function findTraceId(externalId: string | undefined, hash: string): strin
   return r?.id;
 }
 
+/** 按外部 ID 查轨迹（导入后挂载样例参考评分用） */
+export function getTraceIdByExternalId(externalId: string): string | null {
+  const r = db.prepare("SELECT id FROM traces WHERE external_id = ? LIMIT 1").get(externalId) as { id: string } | undefined;
+  return r?.id ?? null;
+}
+
 interface Entry { raw: unknown; normalized: NormalizedTrace }
 
 export function insertImportAndTraces(
@@ -123,7 +129,7 @@ function mapTraceRow(r: Record<string, unknown>): TraceListItem {
     input: r.input as string, output: (r.output as string) ?? undefined,
     status: r.status as string, startedAt: (r.started_at as string) ?? undefined,
     endedAt: (r.ended_at as string) ?? undefined, durationMs: (r.duration_ms as number) ?? undefined,
-    tags: JSON.parse((r.tags_json as string) ?? "[]"),
+    tags: JSON.parse((r.tags_json as string) || "[]"),
     tokenInput: (r.token_input as number) ?? undefined,
     tokenOutput: (r.token_output as number) ?? undefined,
     stepCount: Number(r.step_count ?? 0), createdAt: r.created_at as string,

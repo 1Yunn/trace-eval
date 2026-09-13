@@ -66,6 +66,8 @@ export interface JudgeIssue {
   severity: IssueSeverity;
   dimension_key: string;
   message: string;
+  /** 针对该问题的具体修复建议（中文，可执行）；历史记录或模型漏返回时为空串 */
+  suggestion: string;
 }
 
 export interface JudgeOutput {

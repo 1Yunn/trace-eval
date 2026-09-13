@@ -11,6 +11,7 @@ export const JudgeIssueSchema = z.object({
   severity: z.enum(["high", "medium", "low"]).default("low"),
   dimension_key: z.string().default(""),
   message: z.string().default(""),
+  suggestion: z.string().default(""),
 });
 
 export const JudgeOutputSchema = z.object({

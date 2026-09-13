@@ -41,6 +41,7 @@ export default function TraceDetailPage() {
   if (!data) return <div className="py-20 text-center text-fg-tertiary">加载中…</div>;
 
   const t = data.trace;
+  const latestSuccess = data.evaluations.find((e) => e.status === "success");
   return (
     <div className="mx-auto max-w-6xl space-y-5">
       <Link href="/" className="inline-flex items-center gap-1 text-[13px] text-muted hover:text-accent">
@@ -68,9 +69,13 @@ export default function TraceDetailPage() {
       <div className="grid grid-cols-3 gap-5">
         <div className="col-span-2 space-y-3">
           <h2 className="text-[14px] font-semibold">执行时间线</h2>
-          <TraceTimeline steps={data.steps} />
+          <TraceTimeline
+            steps={data.steps}
+            issues={latestSuccess?.issues}
+            rubrics={rubrics}
+          />
         </div>
-        <div className="col-span-1">
+        <div className="col-span-1 pt-[31.5px]">
           <EvalPanel traceId={t.id} rubrics={rubrics} initial={data.evaluations} onChanged={() => void load()} />
         </div>
       </div>

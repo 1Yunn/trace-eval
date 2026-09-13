@@ -1,7 +1,8 @@
 import { db, newId } from "./db";
 import {
-  DEFAULT_PROMPT_TEMPLATE, DEFAULT_RUBRIC_DRAFT,
+  DEFAULT_PROMPT_TEMPLATE, DEFAULT_RUBRIC_DRAFT, LEGACY_DEFAULT_RUBRIC_NAME,
 } from "./rubric-defaults";
+import { weightedScore } from "./scoring/weight";
 import type { JudgeOutput, Rubric, RubricDimension } from "./types";
 
 export interface EvaluationRow {
@@ -59,6 +60,13 @@ export function setDefaultRubric(id: string): void {
 let seeded = false;
 export function getDefaultRubric(): Rubric {
   if (!seeded) {
+    // 旧库：把已播种的内置 v1 rubric 原地升级为含「修复建议」的 v2 模板（保持 id 与历史评分关联不变，幂等）。
+    db.prepare(
+      `UPDATE rubrics
+         SET name = ?, prompt_template = ?, version = version + 1
+       WHERE is_default = 1 AND name = ?`,
+    ).run(DEFAULT_RUBRIC_DRAFT.name, DEFAULT_PROMPT_TEMPLATE, LEGACY_DEFAULT_RUBRIC_NAME);
+
     const existing = db.prepare("SELECT id FROM rubrics WHERE is_default = 1 LIMIT 1").get() as { id: string } | undefined;
     if (!existing) {
       const anyRow = db.prepare("SELECT id FROM rubrics LIMIT 1").get() as { id: string } | undefined;
@@ -128,7 +136,7 @@ function mapEval(r: Record<string, unknown>): EvaluationRow {
     overallScore: r.overall_score === null ? undefined : Number(r.overall_score),
     passed: r.passed === null ? undefined : !!r.passed,
     summary: (r.summary as string) ?? undefined,
-    issues: JSON.parse((r.issues_json as string) ?? "[]"),
+    issues: JSON.parse((r.issues_json as string) || "[]"),
     error: (r.error as string) ?? undefined,
     tokenInput: r.token_input === null ? undefined : Number(r.token_input),
     tokenOutput: r.token_output === null ? undefined : Number(r.token_output),
@@ -176,6 +184,47 @@ export function saveEvaluationSuccess(
 export function saveEvaluationError(id: string, error: string, raw?: string): void {
   db.prepare("UPDATE evaluations SET status='error', error=?, judge_raw=COALESCE(?, judge_raw) WHERE id=?")
     .run(error, raw ?? null, id);
+}
+
+/**
+ * 为样例轨迹写入一条随导入文件附带的「参考评分」（不经过 LLM），
+ * 用于演示与离线走查；总分服务端按 rubric 权重重算，通过结论按通过线判定。
+ */
+export function insertReferenceEvaluation(
+  traceId: string,
+  rubric: Rubric,
+  output: JudgeOutput,
+  modelLabel: string,
+): string {
+  const id = newId();
+  const now = new Date().toISOString();
+  const scoreMap = Object.fromEntries(output.scores.map((s) => [s.dimension_key, s.score]));
+  const overall = weightedScore(rubric.dimensions, scoreMap);
+  const tx = db.transaction(() => {
+    db.prepare(
+      `INSERT INTO evaluations
+         (id, batch_id, trace_id, rubric_id, model, status, overall_score, passed,
+          summary, issues_json, judge_raw, latency_ms, created_at)
+       VALUES (?, ?, ?, ?, ?, 'success', ?, ?, ?, ?, ?, 0, ?)`,
+    ).run(
+      id, `ref-${id}`, traceId, rubric.id, modelLabel,
+      overall, overall >= rubric.passThreshold ? 1 : 0,
+      output.summary, JSON.stringify(output.issues), JSON.stringify(output), now,
+    );
+    const ins = db.prepare(
+      "INSERT INTO eval_scores (id, evaluation_id, dimension_key, score, rationale) VALUES (?, ?, ?, ?, ?)",
+    );
+    for (const s of output.scores) ins.run(newId(), id, s.dimension_key, s.score, s.rationale);
+  });
+  tx();
+  return id;
+}
+
+export function hasReferenceEvaluation(traceId: string): boolean {
+  const r = db.prepare(
+    "SELECT 1 FROM evaluations WHERE trace_id = ? AND batch_id LIKE 'ref-%' LIMIT 1",
+  ).get(traceId);
+  return r !== undefined;
 }
 
 export function resetRunningEvaluations(): number {

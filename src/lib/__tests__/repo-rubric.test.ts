@@ -56,7 +56,7 @@ describe("evaluation repository", () => {
       output: {
         scores: rubric.dimensions.map((d) => ({ dimension_key: d.key, score: 5, rationale: "ok" })),
         overall_score: 5, passed: true, summary: "好",
-        issues: [{ step_idx: null, severity: "low", dimension_key: "safety", message: "x" }],
+        issues: [{ step_idx: null, severity: "low", dimension_key: "safety", message: "x", suggestion: "" }],
       },
       raw: "{}", latencyMs: 120, tokenInput: 10, tokenOutput: 5,
       passThreshold: rubric.passThreshold,
@@ -84,7 +84,7 @@ describe("evaluation repository", () => {
           { dimension_key: rubric.dimensions[1].key, score: 2, rationale: "不足" },
         ],
         overall_score: 3, passed: false, summary: "一般",
-        issues: [{ step_idx: 1, severity: "medium", dimension_key: rubric.dimensions[1].key, message: "y" }],
+        issues: [{ step_idx: 1, severity: "medium", dimension_key: rubric.dimensions[1].key, message: "y", suggestion: "建议先核对参数再重试" }],
       },
       raw: "{}", latencyMs: 50, passThreshold: rubric.passThreshold,
     });
