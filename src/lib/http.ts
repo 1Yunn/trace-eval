@@ -6,6 +6,7 @@ export async function apiJson<T = unknown>(url: string, init?: RequestInit): Pro
   if (!res.ok) {
     const e = new Error((data as { error?: string }).error || `请求失败 (${res.status})`);
     (e as Error & { code?: string }).code = (data as { code?: string }).code;
+    (e as Error & { status?: number }).status = res.status;
     throw e;
   }
   return data as T;

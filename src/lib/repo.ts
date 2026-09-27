@@ -49,6 +49,7 @@ interface Entry { raw: unknown; normalized: NormalizedTrace }
 
 export function insertImportAndTraces(
   filename: string, format: string, entries: Entry[], parseErrors: LineError[],
+  opts?: { traceIdFor?: (entry: Entry, index: number) => string },
 ): ImportReport {
   const importId = newId();
   const importedAt = new Date().toISOString();
@@ -59,13 +60,14 @@ export function insertImportAndTraces(
     // traces.import_id 引用 imports，但 imports 汇总行在本事务末尾才写入，
     // 因此将外键检查延迟到事务提交时（该 pragma 仅在事务内有效）。
     db.pragma("defer_foreign_keys = ON");
-    for (const { raw, normalized } of entries) {
+    for (let i = 0; i < entries.length; i++) {
+      const { raw, normalized } = entries[i];
       const hash = contentHash(normalized);
       if (findTraceId(normalized.externalId, hash)) {
         skipped++;
         continue;
       }
-      const traceId = newId();
+      const traceId = opts?.traceIdFor ? opts.traceIdFor(entries[i], i) : newId();
       const durationMs = computeDurationMs(normalized.startedAt, normalized.endedAt);
       db.prepare(
         `INSERT INTO traces (id, import_id, external_id, content_hash, agent, model,

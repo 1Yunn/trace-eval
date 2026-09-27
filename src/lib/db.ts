@@ -79,6 +79,8 @@ mkdirSync(dirname(dbPath), { recursive: true });
 
 export const db = new Database(dbPath);
 db.pragma("journal_mode = WAL");
+// 并发请求同时写入时等待锁而不是立刻抛 SQLITE_BUSY（serverless 冷启动播种并发场景）。
+db.pragma("busy_timeout = 5000");
 db.pragma("foreign_keys = ON");
 
 db.exec(`CREATE TABLE IF NOT EXISTS _migrations (
