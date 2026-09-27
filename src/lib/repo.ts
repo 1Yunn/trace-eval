@@ -115,7 +115,10 @@ export function insertImportAndTraces(
       succeeded, skipped, parseErrors.length, JSON.stringify(parseErrors.slice(0, 200)), importedAt,
     );
   });
-  tx();
+  // IMMEDIATE：先取写锁再执行，配合 busy_timeout 排队等待。
+  // DEFERRED 模式下两个连接同时「读-升级-写」会死锁并立刻抛 SQLITE_BUSY
+  // （serverless 冷启动时 instrumentation 与路由可能各持一个连接并发播种）。
+  tx.immediate();
 
   return {
     id: importId, filename, format, total: entries.length + parseErrors.length,

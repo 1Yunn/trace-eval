@@ -1,4 +1,4 @@
-import { db, newId } from "./db";
+﻿import { db, newId } from "./db";
 import {
   DEFAULT_PROMPT_TEMPLATE, DEFAULT_RUBRIC_DRAFT, LEGACY_DEFAULT_RUBRIC_NAME,
 } from "./rubric-defaults";
@@ -45,7 +45,7 @@ export function createRubric(input: {
     ).run(id, input.name, versionRow.v + 1, JSON.stringify(input.dimensions),
       input.passThreshold, input.promptTemplate, input.makeDefault ? 1 : 0, createdAt);
   });
-  tx();
+  tx.immediate();
   return getRubric(id)!;
 }
 
@@ -54,7 +54,7 @@ export function setDefaultRubric(id: string): void {
     db.prepare("UPDATE rubrics SET is_default = 0 WHERE is_default = 1").run();
     db.prepare("UPDATE rubrics SET is_default = 1 WHERE id = ?").run(id);
   });
-  tx();
+  tx.immediate();
 }
 
 let seeded = false;
@@ -100,7 +100,7 @@ export function createEvaluationBatch(
       ids.push(id);
     }
   });
-  tx();
+  tx.immediate();
   return ids;
 }
 
@@ -178,7 +178,7 @@ export function saveEvaluationSuccess(
     );
     for (const s of output.scores) ins.run(newId(), id, s.dimension_key, s.score, s.rationale);
   });
-  tx();
+  tx.immediate();
 }
 
 export function saveEvaluationError(id: string, error: string, raw?: string): void {
@@ -216,7 +216,7 @@ export function insertReferenceEvaluation(
     );
     for (const s of output.scores) ins.run(newId(), id, s.dimension_key, s.score, s.rationale);
   });
-  tx();
+  tx.immediate();
   return id;
 }
 

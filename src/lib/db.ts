@@ -1,4 +1,4 @@
-import Database from "better-sqlite3";
+﻿import Database from "better-sqlite3";
 import { mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 
@@ -102,7 +102,7 @@ function runMigrations() {
         new Date().toISOString(),
       );
     });
-    tx();
+    tx.immediate();
   }
 }
 runMigrations();
