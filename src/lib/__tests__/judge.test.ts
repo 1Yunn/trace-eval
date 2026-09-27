@@ -11,7 +11,7 @@ const detail: TraceDetail = {
 };
 const rubric: Rubric = {
   id: "r", name: DEFAULT_RUBRIC_DRAFT.name, version: 1,
-  dimensions: DEFAULT_RUBRIC_DRAFT.dimensions, passThreshold: 4,
+  dimensions: DEFAULT_RUBRIC_DRAFT.dimensions, passThreshold: 3,
   promptTemplate: DEFAULT_PROMPT_TEMPLATE, isDefault: true, createdAt: "",
 };
 const valid = (over = {}) =>
@@ -29,16 +29,16 @@ describe("scoreOne", () => {
   it("parses json and recomputes weighted score / passed", async () => {
     const client = mockClient(async () => ({ content: valid(), usage: { input: 9, output: 8 } }));
     const r = await scoreOne(client, rubric, detail);
-    // 0.3*4 + 0.3*3 + 0.2*3 + 0.1*3 + 0.1*3 = 3.3
+    // 0.3*4 + 0.3*3 + 0.2*3 + 0.2*3 = 3.3
     expect(r.output.overall_score).toBe(3.3);
-    expect(r.output.passed).toBe(false);
+    expect(r.output.passed).toBe(true);
     expect(r.tokenInput).toBe(9);
   });
 
   it("extracts json from markdown fences", async () => {
     const client = mockClient(async () => ({ content: "```json\n" + valid() + "\n```" }));
     const r = await scoreOne(client, rubric, detail);
-    expect(r.output.scores).toHaveLength(5);
+    expect(r.output.scores).toHaveLength(4);
   });
 
   it("retries once with repair message on bad json", async () => {

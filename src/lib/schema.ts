@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export const JudgeScoreSchema = z.object({
   dimension_key: z.string().min(1),
-  score: z.coerce.number(),
+  score: z.coerce.number().min(0).max(4),
   rationale: z.string().default(""),
 });
 

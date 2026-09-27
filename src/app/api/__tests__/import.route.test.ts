@@ -48,12 +48,12 @@ describe("POST /api/import", () => {
       steps: [{ type: "tool_call", name: "shell", input: "{}", status: "error" }],
       demoEvaluation: {
         model: "参考评分（样例）",
-        scores: [{ dimension_key: "task_completion", score: 1, rationale: "未完成" }],
+        scores: [{ dimension_key: "instruction_following", score: 1, rationale: "未完成" }],
         overall_score: 1.4,
         passed: false,
         summary: "样例参考结论",
         issues: [{
-          step_idx: 0, severity: "high", dimension_key: "task_completion",
+          step_idx: 0, severity: "high", dimension_key: "instruction_following",
           message: "问题描述", suggestion: "具体修复建议",
         }],
       },
@@ -71,7 +71,7 @@ describe("POST /api/import", () => {
     expect(evals).toHaveLength(1);
     expect(evals[0].model).toBe("参考评分（样例）");
     expect(evals[0].passed).toBe(false);
-    expect(evals[0].scores[0].dimensionKey).toBe("task_completion");
+    expect(evals[0].scores[0].dimensionKey).toBe("instruction_following");
     const issue = evals[0].issues[0] as { suggestion: string; step_idx: number };
     expect(issue.suggestion).toBe("具体修复建议");
     expect(issue.step_idx).toBe(0);

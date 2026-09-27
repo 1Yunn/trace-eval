@@ -23,12 +23,12 @@ const seedTrace = () => {
 describe("rubric repository", () => {
   it("seeds default rubric once and creates new versions", () => {
     const d = getDefaultRubric();
-    expect(d.dimensions).toHaveLength(5);
+    expect(d.dimensions).toHaveLength(4);
     expect(getDefaultRubric().id).toBe(d.id);
     const d2 = createRubric({
       name: DEFAULT_RUBRIC_DRAFT.name,
       dimensions: DEFAULT_RUBRIC_DRAFT.dimensions,
-      passThreshold: 3.5,
+      passThreshold: 2.5,
       promptTemplate: DEFAULT_PROMPT_TEMPLATE,
       makeDefault: false,
     });
@@ -54,9 +54,9 @@ describe("evaluation repository", () => {
     expect(getBatchStatus("batch-1").running).toBe(1);
     saveEvaluationSuccess(ids[0], {
       output: {
-        scores: rubric.dimensions.map((d) => ({ dimension_key: d.key, score: 5, rationale: "ok" })),
-        overall_score: 5, passed: true, summary: "好",
-        issues: [{ step_idx: null, severity: "low", dimension_key: "safety", message: "x", suggestion: "" }],
+        scores: rubric.dimensions.map((d) => ({ dimension_key: d.key, score: 4, rationale: "ok" })),
+        overall_score: 4, passed: true, summary: "好",
+        issues: [{ step_idx: null, severity: "low", dimension_key: "error_handling", message: "x", suggestion: "" }],
       },
       raw: "{}", latencyMs: 120, tokenInput: 10, tokenOutput: 5,
       passThreshold: rubric.passThreshold,

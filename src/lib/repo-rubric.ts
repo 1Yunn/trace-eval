@@ -1,4 +1,4 @@
-﻿import { db, newId } from "./db";
+import { db, newId } from "./db";
 import {
   DEFAULT_PROMPT_TEMPLATE, DEFAULT_RUBRIC_DRAFT, LEGACY_DEFAULT_RUBRIC_NAME,
 } from "./rubric-defaults";
@@ -60,12 +60,24 @@ export function setDefaultRubric(id: string): void {
 let seeded = false;
 export function getDefaultRubric(): Rubric {
   if (!seeded) {
-    // 旧库：把已播种的内置 v1 rubric 原地升级为含「修复建议」的 v2 模板（保持 id 与历史评分关联不变，幂等）。
+    // 1) 旧库 v1 → v3：改名字和模板（保持 id 不变）
     db.prepare(
       `UPDATE rubrics
          SET name = ?, prompt_template = ?, version = version + 1
        WHERE is_default = 1 AND name = ?`,
-    ).run(DEFAULT_RUBRIC_DRAFT.name, DEFAULT_PROMPT_TEMPLATE, LEGACY_DEFAULT_RUBRIC_NAME);
+    ).run(DEFAULT_RUBRIC_DRAFT.name, DEFAULT_PROMPT_TEMPLATE, "Agent 通用评分 v1");
+
+    // 2) v2 → v3：升级维度结构、通过线、模板（保持 id 不变）
+    db.prepare(
+      `UPDATE rubrics
+         SET name = ?, prompt_template = ?, version = version + 1,
+             dimensions_json = ?, pass_threshold = ?
+       WHERE is_default = 1 AND name = ?`,
+    ).run(
+      DEFAULT_RUBRIC_DRAFT.name, DEFAULT_PROMPT_TEMPLATE,
+      JSON.stringify(DEFAULT_RUBRIC_DRAFT.dimensions), DEFAULT_RUBRIC_DRAFT.passThreshold,
+      LEGACY_DEFAULT_RUBRIC_NAME,
+    );
 
     const existing = db.prepare("SELECT id FROM rubrics WHERE is_default = 1 LIMIT 1").get() as { id: string } | undefined;
     if (!existing) {

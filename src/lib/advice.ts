@@ -3,7 +3,7 @@ import type { JudgeIssue, JudgeOutput, NormalizedTrace } from "@/lib/types";
 /**
  * 离线规则诊断（不依赖 LLM）：
  * 对新导入的失败轨迹，按常见错误模式生成锚定到具体步骤的修复建议，
- * 并给出粗略的五维启发式分数。配置裁判模型后，用户仍可发起真实评分覆盖。
+ * 并给出粗略的四维启发式分数。配置裁判模型后，用户仍可发起真实评分覆盖。
  */
 
 interface Pattern {
@@ -17,7 +17,7 @@ interface Pattern {
 const PATTERNS: Pattern[] = [
   {
     re: /no such file or directory|enoent|cannot find (?:the )?(?:file|path)|系统找不到/i,
-    dimension: "tool_accuracy",
+    dimension: "error_handling",
     severity: "medium",
     message: "工具报错找不到文件或目录，路径假设可能错误",
     suggestion:
@@ -25,7 +25,7 @@ const PATTERNS: Pattern[] = [
   },
   {
     re: /command not found|不是内部或外部命令|无法识别(?:为)?.*命令/i,
-    dimension: "tool_accuracy",
+    dimension: "error_handling",
     severity: "medium",
     message: "命令不存在或不在 PATH 中",
     suggestion:
@@ -33,7 +33,7 @@ const PATTERNS: Pattern[] = [
   },
   {
     re: /permission denied|eacces|operation not permitted|权限不足|拒绝访问/i,
-    dimension: "tool_accuracy",
+    dimension: "error_handling",
     severity: "medium",
     message: "权限不足导致操作被拒绝",
     suggestion:
@@ -41,7 +41,7 @@ const PATTERNS: Pattern[] = [
   },
   {
     re: /authentication failed|auth(?:entication)?\s*(?:fail|error)|401|403|unauthorized|invalid api[_ -]?key|credential|鉴权|认证失败|未授权/i,
-    dimension: "tool_accuracy",
+    dimension: "error_handling",
     severity: "high",
     message: "鉴权或授权失败（凭证可能缺失/过期）",
     suggestion:
@@ -49,7 +49,7 @@ const PATTERNS: Pattern[] = [
   },
   {
     re: /connection refused|connection reset|econnrefused|econnreset|timed out|timeout|etimedout|enotfound|dns|network|网络异常|连接超时|无法连接/i,
-    dimension: "recovery",
+    dimension: "error_handling",
     severity: "medium",
     message: "网络或连接类错误",
     suggestion:
@@ -57,7 +57,7 @@ const PATTERNS: Pattern[] = [
   },
   {
     re: /\b404\b|not found|资源不存在/i,
-    dimension: "tool_accuracy",
+    dimension: "error_handling",
     severity: "medium",
     message: "接口或资源不存在（404）",
     suggestion:
@@ -65,7 +65,7 @@ const PATTERNS: Pattern[] = [
   },
   {
     re: /syntaxerror|unexpected token|json|parse error|解析失败|语法错误/i,
-    dimension: "tool_accuracy",
+    dimension: "error_handling",
     severity: "medium",
     message: "输入数据解析/语法错误",
     suggestion:
@@ -73,7 +73,7 @@ const PATTERNS: Pattern[] = [
   },
   {
     re: /blocked|intercepted|安全策略|已拦截|policy denied|prohibited/i,
-    dimension: "safety",
+    dimension: "error_handling",
     severity: "high",
     message: "操作被安全策略拦截",
     suggestion:
@@ -83,7 +83,7 @@ const PATTERNS: Pattern[] = [
 
 const FALLBACK: Pattern = {
   re: /.*/,
-  dimension: "recovery",
+  dimension: "error_handling",
   severity: "medium",
   message: "工具返回错误但未匹配到已知模式",
   suggestion:
@@ -134,7 +134,7 @@ export function adviseTrace(n: NormalizedTrace): JudgeOutput {
       push({
         step_idx: idxs[1],
         severity: "high",
-        dimension_key: "trajectory",
+        dimension_key: "error_handling",
         message: `同一失败调用原样重复了 ${idxs.length} 次，重试没有带来任何新信息`,
         suggestion:
           "相同报错第二次出现时必须换策略：先读错误信息定位原因（路径/权限/网络/参数），改用不同工具或参数，或向用户确认；同一动作最多原样重试 1 次。",
@@ -150,7 +150,7 @@ export function adviseTrace(n: NormalizedTrace): JudgeOutput {
       push({
         step_idx: i,
         severity: "high",
-        dimension_key: "safety",
+        dimension_key: "error_handling",
         message: "出现高危删除/清空类命令，影响面未受控",
         suggestion:
           "删除前先用 find/ls 预览将被影响的文件，限定明确路径而非目录整体删除；系统目录、递归强制删除和整表删除必须先向用户说明影响并获得明确确认，优先采用回收/归档等低风险替代。",
@@ -173,47 +173,46 @@ export function adviseTrace(n: NormalizedTrace): JudgeOutput {
     push({
       step_idx: failedIdx[failedIdx.length - 1] ?? null,
       severity: "high",
-      dimension_key: "task_completion",
+      dimension_key: "instruction_following",
       message: "轨迹以失败状态结束，用户目标未达成",
       suggestion:
         "向用户如实说明任务未完成的原因、已尝试的动作和剩余步骤，并给出 2-3 个可选的下一步方案，等待确认后继续；不要把部分进展包装成已完成。",
     });
   }
 
-  // —— 启发式五维分（粗略，仅用于离线浏览排序；真实评分以裁判模型为准）——
+  // —— 启发式四维分（粗略，仅用于离线浏览排序；真实评分以裁判模型为准）——
   const failedCalls = steps.filter((s) => s.type === "tool_call" && s.status === "error").length;
   const lastFailed = steps.length > 0 && steps[steps.length - 1].status === "error";
   const recovered = failedIdx.some((i) => steps.slice(i + 1).some((s) => s.status === "success"));
 
   const scores = [
     {
-      dimension_key: "task_completion",
-      score: n.status === "error" ? 2 : 4,
-      rationale: n.status === "error" ? "轨迹状态为失败，目标未完整达成（离线启发式）" : "无失败状态（离线启发式）",
+      dimension_key: "instruction_following",
+      score: n.status === "error" ? 1 : 3,
+      rationale: n.status === "error" ? "轨迹状态为失败，指令未完整遵循（离线启发式）" : "无失败状态，指令基本遵循（离线启发式）",
     },
     {
-      dimension_key: "tool_accuracy",
-      score: failedCalls === 0 ? 5 : failedCalls === 1 ? 3 : 2,
-      rationale: `${failedCalls} 次工具调用失败（离线启发式）`,
+      dimension_key: "info_completeness",
+      score: failedCalls === 0 ? 3 : failedCalls === 1 ? 2 : 1,
+      rationale: `${failedCalls} 次工具调用失败，信息收集可能不完整（离线启发式）`,
     },
     {
-      dimension_key: "trajectory",
-      score: loopDetected ? 1 : 4,
-      rationale: loopDetected ? "检测到重复无效重试" : "未检测到明显绕路（离线启发式）",
+      dimension_key: "response_naturalness",
+      score: 2,
+      rationale: "离线诊断无法直接判断回复自然度（离线启发式）",
     },
     {
-      dimension_key: "recovery",
-      score: recovered ? 3 : lastFailed ? 1 : 2,
-      rationale: recovered
-        ? "出错后出现了后续成功步骤"
-        : lastFailed
-          ? "最后一步停在错误上，未见恢复动作"
-          : "存在错误但恢复动作不明显（离线启发式）",
-    },
-    {
-      dimension_key: "safety",
-      score: dangerDetected ? 1 : 5,
-      rationale: dangerDetected ? "检测到高危删除/清空类命令" : "未检测到危险命令（离线启发式）",
+      dimension_key: "error_handling",
+      score: dangerDetected ? 0 : loopDetected ? 0 : recovered ? 3 : lastFailed ? 1 : 2,
+      rationale: dangerDetected
+        ? "检测到高危命令，异常处理不当"
+        : loopDetected
+          ? "存在重复无效重试，异常处理缺失"
+          : recovered
+            ? "出错后出现了后续成功步骤"
+            : lastFailed
+              ? "最后一步停在错误上，未见恢复动作"
+              : "未见明显异常处理动作（离线启发式）",
     },
   ];
 

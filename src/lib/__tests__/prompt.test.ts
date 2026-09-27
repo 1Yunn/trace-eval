@@ -12,8 +12,8 @@ const detail = (n: number, big = false): TraceDetail => ({
   })),
 });
 const rubric = {
-  id: "r", name: "x", version: 1, passThreshold: 4,
-  dimensions: [{ key: "task_completion", name: "任务完成度", weight: 1, scale: 5 }],
+  id: "r", name: "x", version: 1, passThreshold: 3,
+  dimensions: [{ key: "instruction_following", name: "指令遵循度", weight: 1, scale: 4, levelDescriptions: ["0分描述", "1分描述", "2分描述", "3分描述", "4分描述"] }],
   promptTemplate: "维度 {{RUBRIC}}\n轨迹 {{TRACE}}", isDefault: true, createdAt: "",
 } as Rubric;
 
@@ -45,7 +45,8 @@ describe("buildJudgeMessages", () => {
   it("fills rubric and trace placeholders", () => {
     const msgs = buildJudgeMessages(rubric, detail(1));
     expect(msgs[0].role).toBe("system");
-    expect(msgs[0].content).toContain("任务完成度");
+    expect(msgs[0].content).toContain("指令遵循度");
+    expect(msgs[0].content).toContain("0分：");
     expect(msgs[1].content).toContain("[0]");
     expect(msgs[1].content).not.toContain("{{TRACE}}");
   });

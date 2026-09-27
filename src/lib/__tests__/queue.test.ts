@@ -29,7 +29,7 @@ const fakeClient = (fail = false): JudgeModelClient => ({
     if (fail) throw Object.assign(new Error("boom"), { status: 500 });
     return {
       content: JSON.stringify({
-        scores: DEFAULT_RUBRIC_DRAFT.dimensions.map((d) => ({ dimension_key: d.key, score: 5, rationale: "好" })),
+        scores: DEFAULT_RUBRIC_DRAFT.dimensions.map((d) => ({ dimension_key: d.key, score: 4, rationale: "好" })),
         overall_score: 1, passed: false, summary: "不错", issues: [],
       }),
     };
@@ -62,7 +62,7 @@ describe("runEvaluation", () => {
     await runEvaluation(id, fakeClient());
     const row = getEvaluation(id)!;
     expect(row.status).toBe("success");
-    expect(row.overallScore).toBe(5);
+    expect(row.overallScore).toBe(4);
     expect(row.passed).toBe(true);
   });
 

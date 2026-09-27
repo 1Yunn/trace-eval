@@ -40,6 +40,8 @@ export interface RubricDimension {
   name: string;
   weight: number;
   scale: number;
+  /** 每级分数对应的行为描述，长度 = scale + 1（0到scale） */
+  levelDescriptions?: string[];
 }
 
 export interface Rubric {

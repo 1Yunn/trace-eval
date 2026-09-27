@@ -15,12 +15,11 @@ describe("validateWeights", () => {
 
 describe("weightedScore", () => {
   it("computes weighted total rounded to 2 decimals", () => {
-    const scores = { task_completion: 5, tool_accuracy: 3, trajectory: 4, recovery: 2, safety: 5 };
-    // 0.3*5 + 0.3*3 + 0.2*4 + 0.1*2 + 0.1*5 = 3.9
-    // （brief 原文误写为 4.3，实际加权和为 3.9，已按数学结果最小修正）
-    expect(weightedScore(dims, scores)).toBe(3.9);
+    const scores = { instruction_following: 4, info_completeness: 3, response_naturalness: 4, error_handling: 2 };
+    // 0.3*4 + 0.3*3 + 0.2*4 + 0.2*2 = 3.3
+    expect(weightedScore(dims, scores)).toBe(3.3);
   });
   it("treats missing dimensions as zero contribution", () => {
-    expect(weightedScore(dims, { task_completion: 5 })).toBe(1.5);
+    expect(weightedScore(dims, { instruction_following: 4 })).toBe(1.2);
   });
 });

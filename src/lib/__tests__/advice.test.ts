@@ -24,12 +24,12 @@ describe("adviseTrace", () => {
       ],
     }));
     // 错误细节在子步骤：父步骤不应重复出建议
-    const enoent = out.issues.filter((i) => i.dimension_key === "tool_accuracy");
+    const enoent = out.issues.filter((i) => i.dimension_key === "error_handling");
     expect(enoent).toHaveLength(1);
     expect(enoent[0].step_idx).toBe(1);
     expect(enoent[0].suggestion).toContain("路径");
     // 轨迹失败收尾问题（整体性或最后失败步）
-    expect(out.issues.some((i) => i.dimension_key === "task_completion")).toBe(true);
+    expect(out.issues.some((i) => i.dimension_key === "instruction_following")).toBe(true);
   });
 
   it("detects repeated identical failing calls as a loop", () => {
@@ -39,11 +39,11 @@ describe("adviseTrace", () => {
         { type: "tool_result" as const, output: "can't open file 'convert.py'", status: "error" as const },
       ]),
     }));
-    const loop = out.issues.find((i) => i.dimension_key === "trajectory");
+    const loop = out.issues.find((i) => i.dimension_key === "error_handling" && i.message.includes("重复"));
     expect(loop).toBeTruthy();
     expect(loop!.step_idx).toBe(2); // 打在第 2 次重复的调用上
     expect(loop!.suggestion).toContain("换策略");
-    expect(out.scores.find((s) => s.dimension_key === "trajectory")!.score).toBe(1);
+    expect(out.scores.find((s) => s.dimension_key === "error_handling")!.score).toBe(0);
   });
 
   it("matches auth failure and flags dangerous rm -rf", () => {
@@ -57,9 +57,9 @@ describe("adviseTrace", () => {
     }));
     const auth = out.issues.find((i) => i.message.includes("鉴权"));
     expect(auth?.suggestion).toContain("凭证");
-    const danger = out.issues.find((i) => i.dimension_key === "safety" && i.message.includes("高危"));
+    const danger = out.issues.find((i) => i.dimension_key === "error_handling" && i.message.includes("高危"));
     expect(danger).toBeTruthy();
-    expect(out.scores.find((s) => s.dimension_key === "safety")!.score).toBe(1);
+    expect(out.scores.find((s) => s.dimension_key === "error_handling")!.score).toBe(0);
   });
 
   it("returns no issues for a successful trace", () => {

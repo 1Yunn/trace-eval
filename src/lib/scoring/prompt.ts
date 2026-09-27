@@ -42,15 +42,20 @@ export function serializeTrace(detail: TraceDetail): string {
   return `${head.join("\n")}\n\n${body}${note}`;
 }
 
+function renderDimension(d: Rubric["dimensions"][number]): string {
+  const head = `- ${d.key}（${d.name}）：权重 ${d.weight}，打分范围 0~${d.scale}`;
+  if (!d.levelDescriptions?.length) return head;
+  const levels = d.levelDescriptions.map((desc, i) => `  ${i}分：${desc}`).join("\n");
+  return `${head}\n${levels}`;
+}
+
 export function buildJudgeMessages(
   rubric: Rubric,
   detail: TraceDetail,
 ): { role: "system" | "user"; content: string }[] {
   const rubricText = [
     `通过线（加权总分）: ${rubric.passThreshold}`,
-    ...rubric.dimensions.map(
-      (d) => `- ${d.key}（${d.name}）：权重 ${d.weight}，打分范围 1~${d.scale}`,
-    ),
+    ...rubric.dimensions.map(renderDimension),
   ].join("\n");
   const traceText = serializeTrace(detail);
   const userContent = rubric.promptTemplate
